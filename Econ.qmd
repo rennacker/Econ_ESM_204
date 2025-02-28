@@ -1,13 +1,16 @@
 ---
 title: "Env Econ Assignmnet 1"
 author: Travis Rennacker
-format:
+format: 
   html: 
-   toc: true
-   number-sections: true
-   code-fold: true
-execute: 
-  error: false
+    toc: true
+    code-fold: true
+    code-tools: true 
+    code-summary: "Show Code"
+    embed-resources: true
+execute:
+  warning: false 
+  message: false
 ---
 
 Quarto libraries

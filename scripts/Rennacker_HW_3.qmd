@@ -1,0 +1,278 @@
+---
+title: "Rennacker_HW_3"
+author: "Travis Rennacker"
+format: 
+  html: 
+    toc: true
+    code-fold: true
+    code-tools: true 
+    code-summary: "Show Code"
+    embed-resources: true
+execute:
+  warning: false 
+  message: false
+---
+
+Libraries
+
+```{r}
+#|output: false 
+
+library(here)
+library(janitor)
+library(tidyverse)
+library(pracma)
+
+```
+
+
+
+
+```{r}
+MAC_M <- function(a){
+  m=a*4
+  return(m)
+}
+
+MAC_K <- function(a){
+  m=a*4.5
+  return(m)
+}
+
+MAC_A <- function(a){
+  m=a*3
+  return(m)
+}
+
+MAC_V <- function(a){
+  m=a*2
+  return(m)
+}
+```
+  Prices are in $/Acre Foot and quantities are in Acre Feet (AF).
+● Suppose groundwater abatement costs for each firm have been estimated for you by a team of
+agroecologists and the marginal abatement cost (MAC) curves are as follows:
+o Kern: MAC = 4.5A (where A = abatement)
+o Mojave: MAC = 4A
+o Antelope: MAC = 3A
+o Ventura: MAC = 2A
+
+
+```{r}
+s_values <- seq(0, 200, by = 1)  
+m_values <- sapply(s_values, MAC_M)
+k_values <- sapply(s_values, MAC_K)
+a_values <- sapply(s_values, MAC_A)
+v_values <- sapply(s_values, MAC_V)
+
+Mdata <- data.frame(a = s_values, y = m_values, type = "Mojave")
+Kdata <- data.frame(a = s_values, y = k_values, type = "Kern")
+Adata <- data.frame(a = s_values, y = a_values, type = "Antelope")
+Vdata <- data.frame(a = s_values, y = v_values, type = "Ventura")
+
+# Combine all the data frames into one
+all_data <- rbind(Mdata, Kdata, Adata, Vdata)
+
+# Plot using ggplot2
+ggplot(all_data, aes(x = a, y = y, color = type)) +
+  geom_line() +
+  labs(title = "Water Abatement Costs of Four Counties",
+       x = "Abatement",
+       y = "Price", color="County") +
+  theme_minimal() +
+  scale_color_manual(values = c("Mojave" = "red", "Kern" = "gold2", "Antelope" = "brown", "Ventura" = "turquoise"))
+
+
+```
+
+# Question 1 Response: 
+
+While there is no limit on the ability of each county to abate groundwater usage, there is an increased cost associated respective of location. It would be most cost effective for Ventura County to utilize abatement methods. 
+
+# Question 2 Response: 
+
+
+# 2 a.
+
+Each District would Abate 50 units.
+
+Amount of Abatement
+```{r}
+
+
+
+MAC_K(50)
+MAC_M(50)
+MAC_A(50)
+MAC_V(50)
+
+abatement_strict <- data.frame(
+  price = c(100, 150, 200, 225),
+  county = c("Ventura", "Antelope", "Mojave", "Kern"))
+
+abatement_strict
+
+```
+
+```{r}
+#to find totals for area under curve(aka area under lines)
+bh <- function(b,h){
+  a=(b*h)/2
+  return(a)
+}
+
+bh(50,100) #ventura
+bh(50,150) #antelope
+bh(50,200) #mojave
+bh(50,225) #kern
+
+abatement_strict |> mutate(total_cost = c(2500, 3750, 5000, 5625))
+
+#2500 + 3750 +5000 + 5625 #Total cost for all firms at 200 AF of abatement
+
+```
+
+Total Cost for all counties: $16875
+
+# 2 b. 
+
+MAC_K = 4.5a  :  A_K = p/4.5
+MAC_M = 4a    :  A_M = p/4
+MAC_A = 3a    :  A_A = p/3 
+MAC_V = 2a    :  A_V = p/2
+
+A_K + A_M + A_A + A_V = Aggregate Abatement
+
+Market is set at 200AF of abatement by government
+
+Aggregate Abatement = 200AF
+
+```{r}
+#Function of agg cost
+f_AA <- function(x) {
+  200 - (x / 4.5 + x / 4 + x / 3 + x / 2)
+}
+
+#set interval for root
+result <- uniroot(f_AA, c(0, 1000))  
+
+#Show results
+result$root
+
+```
+# Equilibrium Market Price with cap and trade : $153.19 
+
+```{r}
+
+A_K  <- function(p) {
+  a = p/4.5
+  return(a)
+}
+
+
+A_M <- function(p) {
+  a = p/4
+  return(a)
+} 
+
+A_A <- function(p) {
+ a = p/3 
+ return(a)
+} 
+
+A_V <- function(p) {
+  a = p/2
+  return(a)
+}
+
+bh <- function(b,h){
+  a=(b*h)/2
+  return(a)
+}
+
+
+bh(A_K(153.1915) , 153.19)
+bh(A_M(153.1915) , 153.19)
+bh(A_A(153.1915) , 153.19)
+bh(A_V(153.1915) , 153.19)
+
+dfa <- data.frame(abatement = c(A_K(153.1915),A_M(153.1915),A_A(153.1915),A_V(153.1915)), county= c("Kern", "Mojave", "Antelope", "Ventura"), "total abatement cost per county" = c(2607.49, 2933.426, 3911.234, 5866.851))
+
+dfa
+
+(A_K(153.1915) * 153.19)/2 + (A_M(153.1915) * 153.19)/2 + (A_A(153.1915) * 153.19)/2 + (A_V(153.1915) * 153.19)/2
+
+16875 - 15319 
+
+
+```
+The above table displays how much abatement each county would revert to in a cap and trade scenario. 
+
+Total Abatement Cost  :  $ 15319
+
+Total gains under cap and trade :  16875 - 15319 = **$1556**
+
+
+# 2 c. 
+
+To decrease the amount of water used by 200AF, a tax should be set at $ 153.1915.
+
+```{r}
+dfa 
+
+sum(dfa$abatement, na.rm = TRUE)
+
+```
+Each district would abate the above amount. Total cost is also listed above. 
+
+Total Abatement Across Districts: 200 AF
+
+Total cost of abatement for each district to comply listed in the above table  
+
+```{r}
+#THIS IS WRONG THEY ALL DONT ABATE 100 They each used 100... 
+f_AMV <- function(p) {
+  100 - ( p / 4 + p / 3 + p / 2)
+}
+
+#set interval for root
+result <- uniroot(f_AMV, c(0, 1000))  
+
+#Show results
+result$root
+
+A_M(92.307)
+A_A(92.307)
+A_V(92.307)
+
+MAC_K(200)
+
+```
+
+```{r}
+
+
+# 100 AF for  
+# (100-abatement_per_county)*tax
+#This would be the taxed water usage for each county (initial water usage - abatement)*tax rate
+kern  <- (200 - 34.04256)*153.1915	#Kern			
+ mojave <- (100 - 38.29787)*153.1915	#Mojave			
+   antelope <- (100 - 51.06383)*153.1915	#Antelope		
+    ventura <-(100 - 76.59575)*153.1915	#Ventura
+
+tax_revenue <- data.frame(county= c("Kern", "Mojave", "Antelope", "Ventura"), "tax revenue" = c(kern, mojave, antelope, ventura))
+
+tax_revenue
+
+```
+
+
+
+c. Tax on groundwater use. Suppose instead a single tax is implemented on all water use 
+such that water use is reduced by 200AF summed across the four districts. What is that 
+tax level? How much would each district abate? What is total abatement across 
+districts? What is the total cost of abatement for each district to comply? How much tax 
+revenue is generated if initial water use is 100 AF for Ventura, Antelope, and Mojave 
+and 200 for Kern? 
+
+

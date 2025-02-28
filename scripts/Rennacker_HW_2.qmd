@@ -1,0 +1,325 @@
+---
+title: "Rennacker HW 2"
+author: "Travis Rennacker"
+format:
+  html: 
+   toc: true
+   number-sections: true
+   code-fold: true
+execute: 
+  error: false
+---
+
+Libraries
+
+```{r}
+#|output: false 
+
+library(here)
+library(janitor)
+library(tidyverse)
+library(pracma)
+
+```
+
+Data in
+
+```{r}
+#|output: false 
+
+
+HW2_data_raw <- read_csv(here("data", "HW2_data.csv"))
+
+data_ev <- HW2_data_raw %>%
+  clean_names()
+
+long_ev <- data_ev |> pivot_longer(cols = c(q_dac, q_non_dac), names_to = "type", values_to = "quantity")
+  
+```
+
+Inverse Demand Curves Dac and Non Dac: Solves for Price
+
+```{r}
+
+#inverse demands 
+
+dac <- lm(price_dollars ~ q_dac, data = data_ev)
+  
+ndac <- lm(price_dollars ~ q_non_dac, data = data_ev)
+  
+
+summary(dac)
+summary(ndac)
+```
+
+Filling out the Linear Inverse Demand Curve equations with exact numbers
+
+```{r}
+ndac
+
+dac
+```
+
+Non Dac Inverse Demand: p = 158034.280 - 2.731(q)
+
+Dac Inverse Demand: p = 116854.836 - 6.611(q)
+
+Plot the Linear Demand Curves for assesment
+
+```{r}
+demand_dac <- ggplot(long_ev, aes(x = quantity, y = price_dollars)) +
+  geom_point(aes(color = type), alpha=.5) +
+   geom_abline(intercept = coef(dac)[1], slope = coef(dac)[2], color = "red") +
+  geom_abline(intercept = coef(ndac)[1], slope = coef(ndac)[2], color = "blue") +
+  labs(title = "Dac and Non-Dac Demand Curve",
+       x = "Quantity",
+       y = "Price (Dollars)") +
+  theme_minimal()
+
+demand_dac
+```
+
+Aggragate Demand linear models solve for Quantity
+
+```{r}
+#aggragate demand curves
+#Non Dac Inverse Demand: p =  158034.280 - 2.731(q)
+
+158034.280/2.731
+1/-2.731
+
+#Dac Inverse Demand: p = 116854.836 - 6.611(q)
+116854.836/6.611
+1/-6.611
+
+agg_intercept <- 17675.82 + 57866.82 
+agg_slope <- -0.151263 + -0.3661662
+
+agg_intercept
+agg_slope
+
+```
+
+Aggragate Demand Curve: q = 75542.64 - 0.5174292(p)
+
+Agg Demand Curves Equations
+
+```{r}
+# agg demand under $116854.836 consider both demand curves
+agg_ev_demand <- function(p){
+  q=agg_intercept + agg_slope*p
+  return(q)
+}
+  
+#agg_ev_demand(50000) #quantity of ev cars currently on the market
+
+
+# agg demand over $116854.836 DAC priced out
+non_dac_ev_demand <- function(p){
+  q=coef(ndac)[1] + coef(ndac)[2]*p
+  return(q)
+}
+
+#quantity of ev cars currently on the market
+agg_ev_demand(50000)
+
+```
+
+Inverse Supply Curve for EV
+
+```{r}
+#Inverse supply curve, solve for  49671.18 = 50000/m  p=q*slope (intercept at origin)
+coeficients_supply <- function(p,q) {
+  m = p / q
+  return(m)  
+  
+}
+
+coeficients_supply(50000,49671.18 )
+
+
+#Inverse Supply 
+Iev_supply <- function(q){
+  p=1.00662*q
+  return(q)
+}
+
+1/1.00662
+
+#Supply Curve
+ev_supply <- function(p){
+  q=0.9934235*p
+  return(q)
+}
+
+```
+
+Inverse Supply Curve : p = 1.00662(q) Supply Curve : q = 0.9934235(p)
+
+Find Equalibrium Price and Quantity
+
+```{r}
+
+#function for fzero to find equalibrium price
+eq_ev <- function(p){
+  
+  z=agg_ev_demand(p)-ev_supply(p)
+  return(z)
+}
+
+#equalibrium price evaluated by fzero
+qstar <- fzero(eq_ev, c(0,100000))$x 
+
+#sanity check for equalibrium quantity
+quantity_ev <- agg_ev_demand(50000)
+
+qstar #equalibrium price 
+
+quantity_ev #equalibrium quantity
+```
+
+Consumer Surplus
+
+```{r}
+#Dac Inverse Demand: p = 116854.836 - 6.611(q)
+
+Ddac_demand <- function(p){
+q = 17675 - 0.15126*(p)
+  return(q)
+}
+
+Ddac_demand(50000)
+non_dac_ev_demand(50000)
+
+#non dac cs
+158034.280-50000
+(108034.3 * 39558.4)/2
+# 2,136,832,027
+  
+#dac cs
+116854.836 - 50000
+(66854.84 * 10112)/2
+# 338,018,071
+```
+
+```{r}
+338018071 + 2136832027
+```
+
+Plot the Supply and Demand Curves for plot and assessment 
+```{r}
+
+# Create the price range for plotting
+
+price_range \<- seq(0, 75000, by = 1) price_L_116854 \<- seq(0,116854, by = 1) price_M_116854 \<- seq(116854,163732, by = 1)
+
+# Generate quantities demanded using the linear models for both curves
+
+# Non-DAC demand over dac price range
+
+q_non_dac \<- coef(rd_non_dac)\[1\] + coef(rd_non_dac)\[2\] \* price_M_116854
+
+#agg demand curve under dac price range q_agg \<- agg_intercept + agg_slope \* price_L_116854
+
+# Create data frames for plotting the demand curves
+
+non_dac_demand_df \<- data.frame(price = price_M_116854, quantity = q_non_dac) agg_demand_df \<- data.frame(price = price_L_116854, quantity = q_agg)
+
+# Create the supply curve using the corrected formula q = 1.899629 \* p
+
+supply_values \<- 1.899629 \* price_range supply_df \<- data.frame(price = price_range, supply = supply_values)
+
+```         
+
+
+For Reference
+```{r}
+#|output: false
+
+# Plot the aggregate demand and supply curves
+sup_d <- ggplot() +
+  geom_line(data = agg_demand_df, aes(x = quantity, y = price), color = "blue", size = 1) +
+  geom_line(data = non_dac_demand_df, aes(x = quantity, y = price), color = "blue", size = 1) +  # Aggregate Demand curve
+  geom_line(data = supply_df, aes(x = supply, y = price), color = "red", size = 1) + 
+   geom_line(data = taxed_supply_df, aes(x = supply, y = price), color = "gold4", size = 1) +
+  geom_abline(intercept = coef(dac)[1], slope = coef(dac)[2], color = "green") +
+  geom_abline(intercept = coef(ndac)[1], slope = coef(ndac)[2], color = "gold") +
+   geom_hline(yintercept = 18901.03, color = "black", size = 1) +  # MEC + MPC as a horizontal line
+  labs(title = "Electric Vehicle Aggregate Demand and Supply Curves",
+       x = "Quantity",
+       y = "Price (Dollars)",
+       color = "Curve") +
+  theme_minimal()
+
+sup_d
+```
+
+Calculating MEC and Tax rate
+
+```{r}
+price_range <- seq(0, 75000, by = 1)
+
+#Lithium $300 per kg and 63kg in one EV
+bad_units <- 300*63
+
+MEC <- function(q){
+  p=bad_units*q
+  return(p)
+}
+
+MEC(1)
+
+#tax for environment per unit
+#is it inverse or regular supply that you add the tax too?
+#Inverse Supply 
+
+##############################################################
+#wrong gotta switch the p and q not working
+Taxed_ev_supply <- function(q){
+  p = 18900 + (0.5264185*q) 
+  return(q)
+}
+
+taxed_supply_curve <- Taxed_ev_supply(price_range)
+taxed_supply_df <- data.frame(price = price_range, supply = taxed_supply_curve)
+
+Taxed_ev_supply(1)
+
+```
+
+```{r}
+msc <- function(q){
+  p = 1.00662*q + 18900
+  return(p)
+}
+
+
+#get inverse agg demand in good format
+#q = 75542.64 - 0.5174292(p)
+agg_d_ <- function(q){
+  
+  p= 145996.89-1.932*q
+  return(p)
+}
+
+
+msc_eq_ev <- function(q){
+  
+  z=agg_d_(q)-msc(q)
+  return(z)
+}
+
+#equalibrium price evaluated by fzero
+qstar_msc <- fzero(msc_eq_ev, c(0,100000))$x 
+
+qstar_msc
+
+```
+
+Ratio of Dac Tax
+
+```{r}
+651405548.20/1672930791.48
+```
+
+Rest of the calculations evaluated with reference to the above computed with pen and paper and transcribed on word document

@@ -1,0 +1,178 @@
+---
+title: "Econ HW 2"
+author: "Travis Rennacker"
+format:
+  html: 
+   toc: true
+   number-sections: true
+   code-fold: true
+execute: 
+  error: false
+---
+
+Libraries
+
+```{r}
+#|output: false 
+
+library(here)
+library(janitor)
+library(tidyverse)
+library(pracma)
+
+```
+
+
+
+```{r}
+#|output: false 
+
+
+HW2_data_raw <- read_csv(here("data", "HW2_data.csv"))
+
+data_ev <- HW2_data_raw %>%
+  clean_names()
+
+long_ev <- data_ev |> pivot_longer(cols = c(q_dac, q_non_dac), names_to = "type", values_to = "quantity")
+  
+```
+```{r}
+
+#inverse demands 
+
+dac <- lm(price_dollars ~ q_dac, data = data_ev)
+  
+ndac <- lm(price_dollars ~ q_non_dac, data = data_ev)
+  
+
+summary(dac)
+summary(ndac)
+```
+
+
+Plot the lm 
+```{r}
+demand_dac <- ggplot(long_ev, aes(x = quantity, y = price_dollars)) +
+  geom_point(aes(color = type), alpha=.5) +
+   geom_abline(intercept = coef(dac)[1], slope = coef(dac)[2], color = "red") +
+  geom_abline(intercept = coef(ndac)[1], slope = coef(ndac)[2], color = "blue") +
+  labs(title = "Dac and Non-Dac Demand Curve",
+       x = "Quantity",
+       y = "Price (Dollars)") +
+  theme_minimal()
+
+demand_dac
+```
+
+```{r}
+
+coef(dac)[1]+coef(ndac)[1] #add up y intercepts
+
+# agg demand under 15972 quantity
+agg_ev_demand <- function(p){
+  q=71670 - .4662*p
+  return(q)
+}
+  
+#agg_ev_demand(50000) #quantity of ev cars currently on the market
+
+
+# agg demand over 15972 quantity
+non_dac_ev_demand <- function(p){
+  q=55700 - .3375*p
+  return(q)
+}
+
+non_dac_ev_demand(50000) #quantity of ev cars by non_dac
+
+dac_ev_demand <- function(p){
+  q=15972 - .1287*p
+  return(q)
+}
+
+dac_ev_demand(50000)
+non_dac_ev_demand(50000) + dac_ev_demand(50000)
+
+coeficients_supply <- function(p,m) {
+  b = p / m 
+  return(b)  
+}
+
+coeficients_supply(50000,48362)
+coeficients_supply(50000,48362)
+
+ev_supply <- function(p){
+  q=1.03387*p
+  return(q)
+}
+
+eq_ev <- function(p){
+  
+  z=non_dac_ev_demand(p)-ev_supply(p)
+  return(z)
+}
+
+qstar <- fzero(eq_ev, c(0,100000))$x
+
+quantity_ev <- agg_ev_demand(48362)
+
+qstar
+quantity_ev
+```
+why do these pop out different numbers?
+if you evaluate qdac and qnondac at the 50,000 price and add the quantities you get 48362. This should be the equalibruim quantity, but we know that the equalibrium quantity is outside the range of qdac so only qnondac should apply. why is this our equalibrium quantity if graphically this does not make sense...
+
+```{r}
+noninverse_dac <- lm(q_dac ~ price_dollars, data = data_ev)
+  
+noninverse_ndac <- lm(q_non_dac ~ price_dollars, data = data_ev)
+
+summary(noninverse_dac)
+summary(noninverse_ndac)
+noninverse_ndac
+noninverse_dac
+```
+
+```{r}
+coef(noninverse_dac)[1]+coef(noninverse_ndac)[1]
+```
+
+
+
+```{r}
+
+# Create the price range for plotting
+price_range <- seq(0, 90000, by = 1)
+price_L_15972 <- seq(0,119551, by = 1)
+price_M_15972 <- seq(119551,163732, by = 1)
+# Generate quantities demanded using the linear models for both curves
+q_non_dac <- 55700.0380 - 0.3375 * price_M_15972  # Non-DAC demand curve
+q_agg <-71670 - .4662 * price_L_15972  # DAC demand curve
+
+# Create data frames for plotting the demand curves
+non_dac_demand_df <- data.frame(price = price_M_15972, quantity = q_non_dac)
+agg_demand_df <- data.frame(price = price_L_15972, quantity = q_agg)
+
+
+
+# Create the supply curve using the corrected formula q = 0.9672 * p
+supply_values <- 0.9672 * price_range
+supply_df <- data.frame(price = price_range, supply = supply_values)
+
+# Plot the aggregate demand and supply curves
+sup_d <- ggplot() +
+  geom_line(data = agg_demand_df, aes(x = quantity, y = price), color = "blue", size = 1) +
+  geom_line(data = non_dac_demand_df, aes(x = quantity, y = price), color = "blue", size = 1) +  # Aggregate Demand curve
+  geom_line(data = supply_df, aes(x = supply, y = price), color = "red", size = 1) + 
+   geom_hline(yintercept = 18901.03, color = "black", size = 1) +  # MEC + MPC as a horizontal line
+  labs(title = "Electric Vehicle Aggregate Demand and Supply Curves",
+       x = "Quantity",
+       y = "Price (Dollars)",
+       color = "Curve") +
+  theme_minimal()
+
+sup_d
+
+```
+
+
